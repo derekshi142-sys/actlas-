@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Key, X, Eye, EyeOff, Check, Search } from 'lucide-react'
+import { Key, X, Eye, EyeOff, Check, Search, Hotel } from 'lucide-react'
 import { saveApiKey, getApiKey, removeApiKey } from '@/lib/openai'
 import { saveSerperKey, getStoredSerperKey, removeSerperKey } from '@/lib/serper'
+import { saveHotelBedsCredentials, getStoredHotelBedsKey, getStoredHotelBedsSecret, removeHotelBedsCredentials } from '@/lib/hotelbeds'
 
 interface ApiKeyModalProps {
   isOpen: boolean
@@ -14,14 +15,21 @@ interface ApiKeyModalProps {
 export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProps) {
   const [apiKey, setApiKey] = useState('')
   const [serperKey, setSerperKey] = useState('')
+  const [hotelBedsKey, setHotelBedsKey] = useState('')
+  const [hotelBedsSecret, setHotelBedsSecret] = useState('')
   const [showOpenAIKey, setShowOpenAIKey] = useState(false)
   const [showSerperKey, setShowSerperKey] = useState(false)
+  const [showHotelBedsKey, setShowHotelBedsKey] = useState(false)
+  const [showHotelBedsSecret, setShowHotelBedsSecret] = useState(false)
   const [hasExistingOpenAI, setHasExistingOpenAI] = useState(false)
   const [hasExistingSerper, setHasExistingSerper] = useState(false)
+  const [hasExistingHotelBeds, setHasExistingHotelBeds] = useState(false)
 
   useEffect(() => {
     const existingOpenAI = getApiKey()
     const existingSerper = getStoredSerperKey()
+    const existingHotelBedsKey = getStoredHotelBedsKey()
+    const existingHotelBedsSecret = getStoredHotelBedsSecret()
     
     if (existingOpenAI) {
       setHasExistingOpenAI(true)
@@ -31,6 +39,12 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
     if (existingSerper) {
       setHasExistingSerper(true)
       setSerperKey(existingSerper)
+    }
+
+    if (existingHotelBedsKey && existingHotelBedsSecret) {
+      setHasExistingHotelBeds(true)
+      setHotelBedsKey(existingHotelBedsKey)
+      setHotelBedsSecret(existingHotelBedsSecret)
     }
   }, [isOpen])
 
@@ -44,6 +58,11 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
     
     if (serperKey.trim()) {
       saveSerperKey(serperKey.trim())
+      saved = true
+    }
+
+    if (hotelBedsKey.trim() && hotelBedsSecret.trim()) {
+      saveHotelBedsCredentials(hotelBedsKey.trim(), hotelBedsSecret.trim())
       saved = true
     }
     
@@ -65,6 +84,13 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
     setHasExistingSerper(false)
   }
 
+  const handleRemoveHotelBeds = () => {
+    removeHotelBedsCredentials()
+    setHotelBedsKey('')
+    setHotelBedsSecret('')
+    setHasExistingHotelBeds(false)
+  }
+
   if (!isOpen) return null
 
   return (
@@ -84,7 +110,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
         </div>
 
         <p className="text-gray-600 text-sm mb-6">
-          Configure your API keys for AI-powered itinerary generation with real data from Google. Your keys are stored locally and never sent to our servers.
+          Configure your API keys for AI-powered itinerary generation with real data. Your keys are stored locally and never sent to our servers.
         </p>
 
         {/* OpenAI Section */}
@@ -203,10 +229,91 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
           </div>
         </div>
 
+        {/* HotelBeds Section */}
+        <div className="mb-6 p-4 border-2 border-gray-200 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Hotel className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold">HotelBeds API</h3>
+            {hasExistingHotelBeds && (
+              <span className="ml-auto px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center gap-1">
+                <Check className="w-3 h-3" />
+                Configured
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm text-gray-600 mb-3">
+            <strong>Optional:</strong> Get real hotel availability, pricing, and room options directly from HotelBeds
+          </p>
+
+          <div className="mb-3">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">API Key</label>
+            <div className="relative">
+              <input
+                type={showHotelBedsKey ? 'text' : 'password'}
+                value={hotelBedsKey}
+                onChange={(e) => setHotelBedsKey(e.target.value)}
+                placeholder="Your HotelBeds API Key"
+                className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowHotelBedsKey(!showHotelBedsKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showHotelBedsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="block text-xs font-semibold text-gray-700 mb-1">API Secret</label>
+            <div className="relative">
+              <input
+                type={showHotelBedsSecret ? 'text' : 'password'}
+                value={hotelBedsSecret}
+                onChange={(e) => setHotelBedsSecret(e.target.value)}
+                placeholder="Your HotelBeds API Secret"
+                className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowHotelBedsSecret(!showHotelBedsSecret)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showHotelBedsSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <a
+              href="https://www.hotelbeds.com/api"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:text-blue-700 underline"
+            >
+              Get HotelBeds API credentials →
+            </a>
+            {hasExistingHotelBeds && (
+              <button
+                onClick={handleRemoveHotelBeds}
+                className="ml-auto text-xs text-red-600 hover:text-red-700 underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+            🏨 <strong>Why HotelBeds?</strong> Get real-time hotel availability, accurate pricing, and actual room options for your itinerary!
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <button
             onClick={handleSave}
-            disabled={!apiKey.trim() && !serperKey.trim()}
+            disabled={!apiKey.trim() && !serperKey.trim() && !hotelBedsKey.trim()}
             className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Keys

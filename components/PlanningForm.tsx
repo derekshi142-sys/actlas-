@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, DollarSign, Users, Sparkles } from 'lucide-react'
+import { Calendar, DollarSign, Users, Sparkles, Plane } from 'lucide-react'
 
 interface PlanningFormProps {
   onGenerate: (formData: any) => void

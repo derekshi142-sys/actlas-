@@ -1,5 +1,6 @@
 import { getOpenAI } from './openai'
 import { getDestinationData, hasSerper, initializeSerperFromStorage } from './serper'
+import { checkAvailability, checkRates, hasHotelBeds, initializeHotelBedsFromStorage, getDestinationCode } from './hotelbeds'
 import { Itinerary } from '@/types/itinerary'
 
 interface TripPreferences {
@@ -22,37 +23,71 @@ export async function generateAIItinerary(preferences: TripPreferences): Promise
     throw new Error('OpenAI API key not configured. Please add your API key in settings.')
   }
 
-  // Initialize Serper from storage if available
+  // Initialize Serper and HotelBeds from storage if available
   initializeSerperFromStorage()
+  initializeHotelBedsFromStorage()
 
   const days = Math.ceil(
     (new Date(preferences.endDate).getTime() - new Date(preferences.startDate).getTime()) / 
     (1000 * 60 * 60 * 24)
   ) + 1
 
-  // Fetch real data from Serper
-  const realPlacesData = hasSerper() 
-    ? await (async () => {
-        try {
-          console.log('🔍 Fetching real places from Google via Serper...')
-          const data = await getDestinationData(preferences.destination, preferences.budget, preferences.preferences)
-          console.log('✅ Got Serper data:', {
-            restaurants: data.restaurants.length,
-            hotels: data.hotels.length,
-            attractions: data.attractions.length,
-          })
-          return data
-        } catch (error) {
-          console.warn('⚠️ Serper API failed, continuing without real data:', error)
-          return null
-        }
-      })()
-    : null
+  // Fetch real data from Serper and HotelBeds in parallel
+  const [realPlacesData, hotelBedsData] = await Promise.all([
+    // Serper: Get general place recommendations
+    hasSerper() 
+      ? (async () => {
+          try {
+            console.log('🔍 Fetching real places from Google via Serper...')
+            const data = await getDestinationData(preferences.destination, preferences.budget, preferences.preferences)
+            console.log('✅ Got Serper data:', {
+              restaurants: data.restaurants.length,
+              hotels: data.hotels.length,
+              attractions: data.attractions.length,
+            })
+            return data
+          } catch (error) {
+            console.warn('⚠️ Serper API failed, continuing without real data:', error)
+            return null
+          }
+        })()
+      : Promise.resolve(null),
+    
+    // HotelBeds: Get real hotel availability and pricing
+    hasHotelBeds()
+      ? (async () => {
+          try {
+            console.log('🏨 Fetching real hotel availability from HotelBeds...')
+            // Get destination code for the city
+            const destCode = await getDestinationCode(preferences.destination)
+            if (!destCode) {
+              console.warn('⚠️ Could not find destination code for', preferences.destination)
+              return null
+            }
+            
+            const hotels = await checkAvailability({
+              destination: destCode,
+              checkIn: preferences.startDate,
+              checkOut: preferences.endDate,
+              adults: preferences.travelers,
+              rooms: 1,
+            })
+            
+            console.log('✅ Got HotelBeds data:', hotels.length, 'hotels with real availability')
+            return hotels
+          } catch (error) {
+            console.warn('⚠️ HotelBeds API failed:', error)
+            return null
+          }
+        })()
+      : Promise.resolve(null),
+  ])
 
-  // Build prompt with optional real data from Serper
+  // Build prompt with optional real data from Serper and HotelBeds
   let realDataContext = ''
+  
   if (realPlacesData) {
-    realDataContext = `
+    realDataContext += `
 
 🔍 REAL GOOGLE DATA - USE THESE ACTUAL PLACES:
 
@@ -75,6 +110,28 @@ ${realPlacesData.attractions.slice(0, 15).map((a, i) =>
 `
   }
 
+  if (hotelBedsData && hotelBedsData.length > 0) {
+    realDataContext += `
+
+🏨 REAL HOTELBEDS DATA - ACTUAL HOTELS WITH AVAILABILITY & PRICING:
+
+${hotelBedsData.slice(0, 10).map((hotel, i) => 
+  `${i + 1}. ${hotel.name}
+   Category: ${hotel.categoryName}
+   Price: $${Math.round(hotel.minRate)} - $${Math.round(hotel.maxRate)} per night
+   Address: ${hotel.address || hotel.city}
+   ${hotel.description ? 'Info: ' + hotel.description.substring(0, 150) : ''}`
+).join('\n\n')}
+
+⚠️ IMPORTANT: Use these REAL hotels with ACTUAL pricing for accommodation recommendations!
+`
+  }
+
+  const budgetPerDay = preferences.budget / days
+  const isHighBudget = budgetPerDay > 500
+  const isMediumBudget = budgetPerDay >= 200 && budgetPerDay <= 500
+  const isLowBudget = budgetPerDay < 200
+
   const prompt = `Create a detailed ${days}-day vacation itinerary for ${preferences.destination}.
 
 Trip Details:
@@ -88,6 +145,34 @@ Trip Details:
 - Trip Pace: ${preferences.pace}
 ${preferences.customRequests ? `- Custom Requests: ${preferences.customRequests}` : ''}
 ${realDataContext}
+
+🔥 CRITICAL BUDGET REQUIREMENTS:
+- You MUST use at least 80% of the budget ($${Math.floor(preferences.budget * 0.8)}) to ensure a full, quality experience
+- Target total cost: $${Math.floor(preferences.budget * 0.85)} to $${Math.floor(preferences.budget * 0.95)}
+${isHighBudget ? `
+- HIGH BUDGET DETECTED: Use luxury/premium options:
+  * Business or First Class flights
+  * 5-star hotels with premium amenities
+  * Private transportation or premium car rentals
+  * Fine dining restaurants ($$$$)
+  * Premium activities and exclusive experiences
+  * VIP tours and skip-the-line access
+` : isMediumBudget ? `
+- MEDIUM BUDGET: Use comfortable mid-range options:
+  * Economy Plus or Premium Economy flights
+  * 4-star hotels with good amenities
+  * Standard car rentals or rideshare services
+  * Mix of casual and upscale dining ($$ - $$$)
+  * Popular activities and guided tours
+` : `
+- BUDGET CONSCIOUS: Maximize value:
+  * Economy class flights
+  * 3-star hotels or quality hostels
+  * Public transportation or budget car rentals
+  * Local restaurants and street food ($ - $$)
+  * Free or low-cost activities
+  * Self-guided tours
+`}
 
 For each day, provide:
 1. 3-4 activities with specific times, locations, descriptions, and estimated costs${realPlacesData ? ' - USE REAL ATTRACTIONS FROM THE LIST ABOVE' : ''}
@@ -148,7 +233,15 @@ Format the response as a JSON object with this structure:
   ]
 }
 
-Make it realistic, locally accurate, and within the budget. Only include accommodation and transportation for day 1.${realPlacesData ? '\n\n🎯 CRITICAL: Only use the REAL places provided in the Google data section above. Do not invent or fabricate places.' : ''}`
+IMPORTANT PRICING GUIDELINES:
+- Total cost should be 80-95% of the budget
+- Scale all prices (flights, hotels, meals, activities) according to the budget level
+- Don't be too conservative - use most of the budget to create an amazing experience
+- If high budget, splurge on luxury options
+- If medium budget, choose solid mid-range options
+- If low budget, find best value options
+
+Make it realistic, locally accurate, and USE THE BUDGET FULLY. Only include accommodation and transportation for day 1.${realPlacesData ? '\n\n🎯 CRITICAL: Only use the REAL places provided in the Google data section above. Do not invent or fabricate places.' : ''}`
 
   try {
     const completion = await openai.chat.completions.create({

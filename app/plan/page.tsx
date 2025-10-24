@@ -27,9 +27,11 @@ export default function PlanPage() {
     initializeFromStorage()
     setHasApiKey(!!getApiKey())
     
-    // Also initialize Serper
+    // Also initialize Serper and HotelBeds
     const { initializeSerperFromStorage } = require('@/lib/serper')
+    const { initializeHotelBedsFromStorage } = require('@/lib/hotelbeds')
     initializeSerperFromStorage()
+    initializeHotelBedsFromStorage()
   }, [])
 
   const handleGenerateItinerary = async (formData: any) => {
@@ -127,7 +129,8 @@ export default function PlanPage() {
                 <br />
                 <span className="text-sm mt-2 block space-y-1">
                   <div>• <strong>OpenAI (Required):</strong> AI itinerary generation</div>
-                  <div>• <strong>Serper (Optional):</strong> Real restaurants, hotels & attractions from Google</div>
+                  <div>• <strong>Serper (Optional):</strong> Real restaurants & attractions from Google</div>
+                  <div>• <strong>HotelBeds (Optional):</strong> Real hotel availability & pricing</div>
                 </span>
               </div>
             </div>
