@@ -1,0 +1,29 @@
+================================================
+Atlas Escape - Environment Variables Setup
+================================================
+
+OPTIONAL: Google Maps Integration
+
+If you want to enable interactive maps, create a file named ".env.local" 
+in the root directory with this content:
+
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+
+How to get a Google Maps API Key:
+1. Visit: https://console.cloud.google.com/
+2. Create a new project or select an existing one
+3. Go to "APIs & Services" → "Library"
+4. Search for "Maps JavaScript API" and enable it
+5. Go to "Credentials" → "Create Credentials" → "API Key"
+6. Copy your API key and paste it in the .env.local file
+
+NOTE: The app works perfectly without a Maps API key!
+- With key: Interactive maps with markers and routes
+- Without key: Static list of locations (still fully functional)
+
+================================================
+
+
+
+
+
