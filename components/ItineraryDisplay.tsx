@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Itinerary } from '@/types/itinerary'
+import AnimatedCounter from './AnimatedCounter'
 import {
   MapPin,
   Calendar,
@@ -14,6 +15,7 @@ import {
   Download,
   Save,
   RefreshCw,
+  TrendingDown,
 } from 'lucide-react'
 
 interface ItineraryDisplayProps {
@@ -52,8 +54,31 @@ export default function ItineraryDisplay({
     })
   }
 
+  // Calculate savings (comparing to traditional travel agency cost at 3-5% of trip)
+  const traditionalAgencyCost = itinerary.budget * 0.04 // 4% average
+  const actualCost = itinerary.totalCost
+  const savings = Math.max(0, traditionalAgencyCost)
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Savings Banner */}
+      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl shadow-lg p-6 text-center">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <TrendingDown className="w-8 h-8" />
+          <h2 className="text-3xl font-bold">Amount Saved</h2>
+        </div>
+        <div className="text-5xl font-bold mb-2">
+          <AnimatedCounter 
+            value={savings} 
+            prefix="$" 
+            duration={2500}
+          />
+        </div>
+        <p className="text-green-100 text-sm">
+          vs. traditional travel agency fees (typically 3-5% of trip cost)
+        </p>
+      </div>
+
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-2xl shadow-lg p-8">
         <div className="flex justify-between items-start mb-4">

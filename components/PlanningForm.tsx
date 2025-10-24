@@ -10,6 +10,7 @@ interface PlanningFormProps {
 
 export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormProps) {
   const [destination, setDestination] = useState('')
+  const [homeAirport, setHomeAirport] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [budget, setBudget] = useState('')
@@ -17,6 +18,7 @@ export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormP
   const [preferences, setPreferences] = useState<string[]>([])
   const [travelStyle, setTravelStyle] = useState('balanced')
   const [pace, setPace] = useState('moderate')
+  const [customRequests, setCustomRequests] = useState('')
 
   const preferenceOptions = [
     'Cultural',
@@ -38,13 +40,14 @@ export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormP
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!destination || !startDate || !endDate || !budget) {
+    if (!destination || !homeAirport || !startDate || !endDate || !budget) {
       alert('Please fill in all required fields')
       return
     }
 
     onGenerate({
       destination,
+      homeAirport,
       startDate,
       endDate,
       budget: parseInt(budget),
@@ -52,6 +55,7 @@ export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormP
       preferences,
       travelStyle,
       pace,
+      customRequests,
     })
   }
 
@@ -68,6 +72,21 @@ export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormP
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
             placeholder="e.g., Paris, Tokyo, Bali"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
+            required
+          />
+        </div>
+
+        {/* Home Airport */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <Plane className="inline w-4 h-4" /> Home Airport/City *
+          </label>
+          <input
+            type="text"
+            value={homeAirport}
+            onChange={(e) => setHomeAirport(e.target.value)}
+            placeholder="e.g., New York (JFK), Los Angeles"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
             required
           />
@@ -190,6 +209,20 @@ export default function PlanningForm({ onGenerate, isGenerating }: PlanningFormP
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Custom Requests */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Custom Requests (Optional)
+        </label>
+        <textarea
+          value={customRequests}
+          onChange={(e) => setCustomRequests(e.target.value)}
+          placeholder="Any special requests? e.g., 'I want to visit the Eiffel Tower at sunset', 'Include vegetarian restaurants', 'Prefer boutique hotels'"
+          rows={3}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition resize-none"
+        />
       </div>
 
       {/* Submit Button */}
