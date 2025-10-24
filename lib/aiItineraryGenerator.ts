@@ -4,7 +4,7 @@ import { Itinerary } from '@/types/itinerary'
 
 interface TripPreferences {
   destination: string
-  homeAirport: string
+  homeCity: string
   startDate: string
   endDate: string
   budget: number
@@ -78,7 +78,7 @@ ${realPlacesData.attractions.slice(0, 15).map((a, i) =>
   const prompt = `Create a detailed ${days}-day vacation itinerary for ${preferences.destination}.
 
 Trip Details:
-- Departure From: ${preferences.homeAirport}
+- Home City/Airport: ${preferences.homeCity}
 - Destination: ${preferences.destination}
 - Dates: ${preferences.startDate} to ${preferences.endDate}
 - Budget: $${preferences.budget} USD
@@ -92,9 +92,7 @@ ${realDataContext}
 For each day, provide:
 1. 3-4 activities with specific times, locations, descriptions, and estimated costs${realPlacesData ? ' - USE REAL ATTRACTIONS FROM THE LIST ABOVE' : ''}
 2. Restaurant recommendations for breakfast, lunch, and dinner with cuisine types and costs${realPlacesData ? ' - USE REAL RESTAURANTS FROM THE LIST ABOVE' : ''}
-3. For day 1 only: accommodation details (hotel name, type, amenities, price per night)${realPlacesData ? ' - USE REAL HOTELS FROM THE LIST ABOVE' : ''} and transportation (flight details from ${preferences.homeAirport} to ${preferences.destination}, local transport)
-
-${preferences.customRequests ? `IMPORTANT: Make sure to incorporate these custom requests: ${preferences.customRequests}` : ''}
+3. For day 1 only: accommodation details (hotel name, type, amenities, price per night)${realPlacesData ? ' - USE REAL HOTELS FROM THE LIST ABOVE' : ''} and transportation (flight details, local transport)
 
 Format the response as a JSON object with this structure:
 {
@@ -131,7 +129,7 @@ Format the response as a JSON object with this structure:
       "transportation": {
         "outbound": {
           "type": "Flight",
-          "from": "${preferences.homeAirport}",
+          "from": "${preferences.homeCity}",
           "to": "${preferences.destination}",
           "departure": "08:00",
           "arrival": "12:00",

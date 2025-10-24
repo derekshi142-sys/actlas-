@@ -5,27 +5,20 @@ import { useEffect, useState } from 'react'
 interface AnimatedCounterProps {
   value: number
   duration?: number
-  prefix?: string
-  suffix?: string
 }
 
-export default function AnimatedCounter({ 
-  value, 
-  duration = 2000, 
-  prefix = '', 
-  suffix = '' 
-}: AnimatedCounterProps) {
+export default function AnimatedCounter({ value, duration = 2000 }: AnimatedCounterProps) {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
-    let startTime: number | null = null
+    let startTime: number
     let animationFrame: number
 
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime
       const progress = Math.min((currentTime - startTime) / duration, 1)
-
-      // Easing function for smooth acceleration and deceleration
+      
+      // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4)
       
       setCount(Math.floor(easeOutQuart * value))
@@ -42,7 +35,7 @@ export default function AnimatedCounter({
 
   return (
     <span className="tabular-nums">
-      {prefix}{count.toLocaleString()}{suffix}
+      ${count.toLocaleString()}
     </span>
   )
 }
