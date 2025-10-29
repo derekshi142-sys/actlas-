@@ -1,6 +1,8 @@
 import OpenAI from 'openai'
+import { saveApiKeysToFirestore, removeApiKeyFromFirestore } from './apiKeysService'
 
 let openaiInstance: OpenAI | null = null
+let currentUserId: string | null = null
 
 export function initializeOpenAI(apiKey: string) {
   openaiInstance = new OpenAI({
@@ -18,11 +20,25 @@ export function hasOpenAI(): boolean {
   return openaiInstance !== null
 }
 
-// Store API key in localStorage
-export function saveApiKey(apiKey: string) {
+// Set current user ID for Firestore sync
+export function setOpenAIUserId(userId: string | null) {
+  currentUserId = userId
+}
+
+// Store API key in localStorage and Firestore
+export async function saveApiKey(apiKey: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('openai_api_key', apiKey)
     initializeOpenAI(apiKey)
+    
+    // Sync to Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await saveApiKeysToFirestore(currentUserId, { openai: apiKey })
+      } catch (error) {
+        console.error('Failed to sync OpenAI key to Firestore:', error)
+      }
+    }
   }
 }
 
@@ -34,11 +50,20 @@ export function getApiKey(): string | null {
   return null
 }
 
-// Remove API key
-export function removeApiKey() {
+// Remove API key from localStorage and Firestore
+export async function removeApiKey() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('openai_api_key')
     openaiInstance = null
+    
+    // Remove from Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await removeApiKeyFromFirestore(currentUserId, 'openai')
+      } catch (error) {
+        console.error('Failed to remove OpenAI key from Firestore:', error)
+      }
+    }
   }
 }
 
@@ -46,6 +71,14 @@ export function removeApiKey() {
 export function initializeFromStorage() {
   const apiKey = getApiKey()
   if (apiKey) {
+    initializeOpenAI(apiKey)
+  }
+}
+
+// Load API key from Firestore and update localStorage
+export function loadApiKeyFromFirestore(apiKey: string | undefined) {
+  if (apiKey && typeof window !== 'undefined') {
+    localStorage.setItem('openai_api_key', apiKey)
     initializeOpenAI(apiKey)
   }
 }

@@ -1,6 +1,8 @@
 // Serper API integration for Google search data
+import { saveApiKeysToFirestore, removeApiKeyFromFirestore } from './apiKeysService'
 
 let serperApiKey: string | null = null
+let currentUserId: string | null = null
 
 export function initializeSerper(apiKey: string) {
   serperApiKey = apiKey
@@ -14,11 +16,25 @@ export function hasSerper(): boolean {
   return serperApiKey !== null
 }
 
-// Store Serper key in localStorage
-export function saveSerperKey(apiKey: string) {
+// Set current user ID for Firestore sync
+export function setSerperUserId(userId: string | null) {
+  currentUserId = userId
+}
+
+// Store Serper key in localStorage and Firestore
+export async function saveSerperKey(apiKey: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('serper_api_key', apiKey)
     initializeSerper(apiKey)
+    
+    // Sync to Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await saveApiKeysToFirestore(currentUserId, { serper: apiKey })
+      } catch (error) {
+        console.error('Failed to sync Serper key to Firestore:', error)
+      }
+    }
   }
 }
 
@@ -30,11 +46,20 @@ export function getStoredSerperKey(): string | null {
   return null
 }
 
-// Remove Serper key
-export function removeSerperKey() {
+// Remove Serper key from localStorage and Firestore
+export async function removeSerperKey() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('serper_api_key')
     serperApiKey = null
+    
+    // Remove from Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await removeApiKeyFromFirestore(currentUserId, 'serper')
+      } catch (error) {
+        console.error('Failed to remove Serper key from Firestore:', error)
+      }
+    }
   }
 }
 
@@ -42,6 +67,14 @@ export function removeSerperKey() {
 export function initializeSerperFromStorage() {
   const apiKey = getStoredSerperKey()
   if (apiKey) {
+    initializeSerper(apiKey)
+  }
+}
+
+// Load API key from Firestore and update localStorage
+export function loadSerperKeyFromFirestore(apiKey: string | undefined) {
+  if (apiKey && typeof window !== 'undefined') {
+    localStorage.setItem('serper_api_key', apiKey)
     initializeSerper(apiKey)
   }
 }

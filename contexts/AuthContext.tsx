@@ -11,6 +11,19 @@ import {
   signInWithPopup,
 } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '@/lib/firebase'
+import { loadApiKeysFromFirestore } from '@/lib/apiKeysService'
+import { 
+  setOpenAIUserId, 
+  loadApiKeyFromFirestore as loadOpenAIKey 
+} from '@/lib/openai'
+import { 
+  setSerperUserId, 
+  loadSerperKeyFromFirestore as loadSerperKey 
+} from '@/lib/serper'
+import { 
+  setHotelBedsUserId, 
+  loadHotelBedsCredentialsFromFirestore as loadHotelBedsCredentials 
+} from '@/lib/hotelbeds'
 
 interface AuthContextType {
   user: User | null
@@ -44,8 +57,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
+      
+      if (user) {
+        // Set user IDs for all API key services
+        setOpenAIUserId(user.uid)
+        setSerperUserId(user.uid)
+        setHotelBedsUserId(user.uid)
+        
+        // Load API keys from Firestore
+        try {
+          const apiKeys = await loadApiKeysFromFirestore(user.uid)
+          if (apiKeys) {
+            // Load each API key into its respective service
+            loadOpenAIKey(apiKeys.openai)
+            loadSerperKey(apiKeys.serper)
+            loadHotelBedsCredentials(apiKeys.hotelbedsKey, apiKeys.hotelbedsSecret)
+            console.log('✅ API keys loaded from Firestore and synced to localStorage')
+          }
+        } catch (error) {
+          console.error('Error loading API keys from Firestore:', error)
+        }
+      } else {
+        // Clear user IDs when logged out
+        setOpenAIUserId(null)
+        setSerperUserId(null)
+        setHotelBedsUserId(null)
+      }
+      
       setLoading(false)
     })
 

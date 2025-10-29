@@ -1,4 +1,5 @@
 // HotelBeds API integration for real hotel search and booking
+import { saveApiKeysToFirestore, removeApiKeyFromFirestore } from './apiKeysService'
 
 interface HotelBedsConfig {
   apiKey: string
@@ -7,6 +8,7 @@ interface HotelBedsConfig {
 }
 
 let hotelBedsConfig: HotelBedsConfig | null = null
+let currentUserId: string | null = null
 
 // Initialize HotelBeds API
 export function initializeHotelBeds(apiKey: string, apiSecret: string) {
@@ -25,12 +27,29 @@ export function getHotelBedsConfig(): HotelBedsConfig | null {
   return hotelBedsConfig
 }
 
-// Store HotelBeds credentials in localStorage
-export function saveHotelBedsCredentials(apiKey: string, apiSecret: string) {
+// Set current user ID for Firestore sync
+export function setHotelBedsUserId(userId: string | null) {
+  currentUserId = userId
+}
+
+// Store HotelBeds credentials in localStorage and Firestore
+export async function saveHotelBedsCredentials(apiKey: string, apiSecret: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('hotelbeds_api_key', apiKey)
     localStorage.setItem('hotelbeds_api_secret', apiSecret)
     initializeHotelBeds(apiKey, apiSecret)
+    
+    // Sync to Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await saveApiKeysToFirestore(currentUserId, { 
+          hotelbedsKey: apiKey,
+          hotelbedsSecret: apiSecret 
+        })
+      } catch (error) {
+        console.error('Failed to sync HotelBeds credentials to Firestore:', error)
+      }
+    }
   }
 }
 
@@ -49,12 +68,22 @@ export function getStoredHotelBedsSecret(): string | null {
   return null
 }
 
-// Remove credentials
-export function removeHotelBedsCredentials() {
+// Remove credentials from localStorage and Firestore
+export async function removeHotelBedsCredentials() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('hotelbeds_api_key')
     localStorage.removeItem('hotelbeds_api_secret')
     hotelBedsConfig = null
+    
+    // Remove from Firestore if user is logged in
+    if (currentUserId) {
+      try {
+        await removeApiKeyFromFirestore(currentUserId, 'hotelbedsKey')
+        await removeApiKeyFromFirestore(currentUserId, 'hotelbedsSecret')
+      } catch (error) {
+        console.error('Failed to remove HotelBeds credentials from Firestore:', error)
+      }
+    }
   }
 }
 
@@ -63,6 +92,18 @@ export function initializeHotelBedsFromStorage() {
   const apiKey = getStoredHotelBedsKey()
   const apiSecret = getStoredHotelBedsSecret()
   if (apiKey && apiSecret) {
+    initializeHotelBeds(apiKey, apiSecret)
+  }
+}
+
+// Load credentials from Firestore and update localStorage
+export function loadHotelBedsCredentialsFromFirestore(
+  apiKey: string | undefined,
+  apiSecret: string | undefined
+) {
+  if (apiKey && apiSecret && typeof window !== 'undefined') {
+    localStorage.setItem('hotelbeds_api_key', apiKey)
+    localStorage.setItem('hotelbeds_api_secret', apiSecret)
     initializeHotelBeds(apiKey, apiSecret)
   }
 }

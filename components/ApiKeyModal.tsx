@@ -48,21 +48,21 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
     }
   }, [isOpen])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let saved = false
     
     if (apiKey.trim()) {
-      saveApiKey(apiKey.trim())
+      await saveApiKey(apiKey.trim())
       saved = true
     }
     
     if (serperKey.trim()) {
-      saveSerperKey(serperKey.trim())
+      await saveSerperKey(serperKey.trim())
       saved = true
     }
 
     if (hotelBedsKey.trim() && hotelBedsSecret.trim()) {
-      saveHotelBedsCredentials(hotelBedsKey.trim(), hotelBedsSecret.trim())
+      await saveHotelBedsCredentials(hotelBedsKey.trim(), hotelBedsSecret.trim())
       saved = true
     }
     
@@ -72,20 +72,20 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
     }
   }
 
-  const handleRemoveOpenAI = () => {
-    removeApiKey()
+  const handleRemoveOpenAI = async () => {
+    await removeApiKey()
     setApiKey('')
     setHasExistingOpenAI(false)
   }
 
-  const handleRemoveSerper = () => {
-    removeSerperKey()
+  const handleRemoveSerper = async () => {
+    await removeSerperKey()
     setSerperKey('')
     setHasExistingSerper(false)
   }
 
-  const handleRemoveHotelBeds = () => {
-    removeHotelBedsCredentials()
+  const handleRemoveHotelBeds = async () => {
+    await removeHotelBedsCredentials()
     setHotelBedsKey('')
     setHotelBedsSecret('')
     setHasExistingHotelBeds(false)
@@ -110,7 +110,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
         </div>
 
         <p className="text-gray-600 text-sm mb-6">
-          Configure your API keys for AI-powered itinerary generation with real data. Your keys are stored locally and never sent to our servers.
+          Configure your API keys for AI-powered itinerary generation with real data. Your keys are securely stored in your account and synced across all your devices.
         </p>
 
         {/* OpenAI Section */}
@@ -321,7 +321,7 @@ export default function ApiKeyModal({ isOpen, onClose, onSave }: ApiKeyModalProp
         </div>
 
         <p className="text-xs text-gray-500 mt-4 text-center">
-          🔒 Your API keys are stored securely in your browser only
+          🔒 Your API keys are encrypted and securely stored in your account
         </p>
       </div>
     </div>
